@@ -1,8 +1,11 @@
 from django.contrib import admin
+from django.template.response import TemplateResponse
 from django.utils.html import mark_safe
 from courses.models import Category, Course, Lesson, User, Tag
 from django import forms
+from django.urls import path
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
+from django.db.models import Count
 
 
 class CourseForm(forms.ModelForm):
@@ -11,6 +14,22 @@ class CourseForm(forms.ModelForm):
     class Meta:
         model = Course
         fields = '__all__'
+
+
+class CourseAppAdminSite(admin.AdminSite):
+    site_header = 'eCourseApp'
+
+    def get_urls(self):
+        return [path('course-stats/', self.stats_view)] + super().get_urls()
+
+    def stats_view(self, request):
+        course_stats = Category.objects.annotate(c=Count('course__id')).values('id', 'name', 'c')
+        return TemplateResponse(request, 'admin/stats.html', {
+            "course_stats": course_stats
+        })
+
+
+admin_site = CourseAppAdminSite(name='eCourseApp')
 
 
 class MyCourseAdmin(admin.ModelAdmin):
@@ -26,12 +45,12 @@ class MyCourseAdmin(admin.ModelAdmin):
 
     class Media:
         css = {
-            'all': ('/static/css/style.css', )
+            'all': ('/static/css/style.css',)
         }
 
 
-admin.site.register(Category)
-admin.site.register(Course, MyCourseAdmin)
-admin.site.register(Lesson)
-admin.site.register(User)
-admin.site.register(Tag)
+admin_site.register(Category)
+admin_site.register(Course, MyCourseAdmin)
+admin_site.register(Lesson)
+admin_site.register(User)
+admin_site.register(Tag)
